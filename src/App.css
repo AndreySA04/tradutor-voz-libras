@@ -1,0 +1,91 @@
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: #f6f6f6;
+  background-color: #2f2f2f;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-color: #242424; 
+  overflow: hidden;
+  border: 1px solid #444; 
+  display: flex;
+  flex-direction: column;
+}
+
+.avatar-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.mic-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 50;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.mic-button.listening {
+  background-color: #10b981; 
+  opacity: 0.5; 
+}
+.mic-button.listening:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.mic-button.muted {
+  background-color: #ef4444; 
+  opacity: 1; 
+}
+.mic-button.muted:hover {
+  background-color: #dc2626;
+  transform: scale(1.05);
+}
+
+#gameContainer {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  margin: 0 !important;
+}
+
+#gameContainer canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  background: transparent !important;
+  outline: none !important;
+}
