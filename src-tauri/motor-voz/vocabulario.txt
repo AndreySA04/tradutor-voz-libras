@@ -1,0 +1,65 @@
+# ==============================================================================
+# VOCABULÁRIO PRIORITÁRIO PARA RECONHECIMENTO DE VOZ (VOSK)
+# ==============================================================================
+# Adicione palavras ou expressões (uma por linha) que você quer que o motor
+# reconheça com máxima prioridade e precisão.
+#
+# Dica: Expressões compostas (ex: "diagrama de classes") ajudam o Vosk a
+# não quebrar termos técnicos em palavras aleatórias.
+# ==============================================================================
+
+# Tecnologia, ADS & Engenharia de Software
+programação
+programação orientada a objetos
+orientada a objetos
+diagrama de classes
+diagrama
+engenharia de software
+desenvolvimento de software
+desenvolvimento web
+software
+código
+algoritmo
+estrutura de dados
+banco de dados
+interface
+classes
+objetos
+métodos
+atributos
+função
+variável
+computador
+sistema
+tecnologia
+
+# Comunicação, Educação & Acessibilidade
+acessibilidade
+língua brasileira de sinais
+linguagem de sinais
+libras
+tradutor
+tradução
+trabalho de graduação
+apresentação
+professor
+alunos
+faculdade
+fatec
+
+# Expressões Cotidianas
+olá
+olá tudo bem
+como vai
+tudo certo
+bom dia
+boa tarde
+boa noite
+por favor
+obrigado
+obrigada
+com licença
+até logo
+tchau
+sim
+não

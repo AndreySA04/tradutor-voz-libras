@@ -8,11 +8,8 @@ Protocolo Python -> Interface (sempre JSON):
     {"tipo": "nivel",   "valor": float}  # volume do microfone (0..1) para o indicador visual
     {"tipo": "mudo",    "valor": bool}
 
-Protocolo Interface -> Python (texto simples, igual à versão anterior):
+Protocolo Interface -> Python (texto simples):
     "COMANDO:MUTE" | "COMANDO:UNMUTE"
-
-Pode ser executado manualmente (`python motor.py`) ou iniciado automaticamente
-pelo app Tauri, que também o encerra quando a janela é fechada.
 """
 
 import array
@@ -30,27 +27,27 @@ from vosk import KaldiRecognizer, Model, SetLogLevel
 from websockets.asyncio.server import broadcast, serve
 from websockets.exceptions import ConnectionClosed
 
-# Configurações
+# Configurações de Áudio e Desempenho
 HOST = "127.0.0.1"
 PORTA = int(os.environ.get("MOTOR_VOZ_PORTA", "8765"))
 SAMPLE_RATE = 16000
-TAMANHO_BLOCO = 4000  # 250 ms: legenda parcial e indicador de volume mais responsivos
+TAMANHO_BLOCO = 4000  # Bloco estável para captura fonética completa
 INTERVALO_RETENTATIVA_MIC = 3.0  # segundos entre tentativas de reabrir o microfone
-TAMANHO_MINIMO_FRASE = 2  # descarta "frases" de 1 letra, geralmente ruído ("a", "e", "o")
+TAMANHO_MINIMO_FRASE = 2  # descarta "frases" de 1 letra (ruídos)
 
 
 def _diretorio_base():
-    # Quando empacotado com PyInstaller, o modelo fica ao lado do executável
     if getattr(sys, "frozen", False):
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
 
 CAMINHO_MODELO = os.environ.get("VOSK_MODELO", os.path.join(_diretorio_base(), "modelo"))
+ARQUIVO_VOCABULARIO = os.path.join(_diretorio_base(), "vocabulario.txt")
 
 
 def log(*args):
-    """print() que nunca derruba o motor (ex.: sem console ou com encoding limitado)."""
+    """print() seguro com flush imediato."""
     try:
         print(*args, flush=True)
     except Exception:
@@ -77,7 +74,7 @@ estado = Estado()
 
 
 def publicar(mensagem):
-    """Envia uma mensagem para todas as interfaces conectadas. Pode ser chamada de qualquer thread."""
+    """Envia uma mensagem para todas as interfaces conectadas."""
     loop = estado.loop
     if loop is None or loop.is_closed():
         return
@@ -85,7 +82,7 @@ def publicar(mensagem):
     try:
         loop.call_soon_threadsafe(lambda: broadcast(estado.clientes, dados))
     except RuntimeError:
-        pass  # loop encerrando
+        pass
 
 
 def definir_status(novo_estado, mensagem=""):
@@ -98,7 +95,7 @@ def definir_mudo(valor):
     if estado.mudo == valor:
         return
     estado.mudo = valor
-    estado.resetar_reconhecedor.set()  # descarta o que estava pela metade
+    estado.resetar_reconhecedor.set()
     log("[MOTOR] 🔇 Microfone mutado." if valor else "[MOTOR] 🎙️ Microfone ativo.")
     publicar({"tipo": "mudo", "valor": valor})
 
@@ -109,7 +106,6 @@ async def atender_interface(websocket):
     estado.clientes.add(websocket)
     log("[REDE] 🟢 Interface conectada.")
     try:
-        # Quem acabou de conectar recebe o estado atual imediatamente
         await websocket.send(json.dumps(estado.status, ensure_ascii=False))
         await websocket.send(json.dumps({"tipo": "mudo", "valor": estado.mudo}))
 
@@ -125,10 +121,75 @@ async def atender_interface(websocket):
         log("[REDE] 🔴 Interface desconectada.")
 
 
-# ---------------------------------------------------------------- Áudio
+# ---------------------------------------------------------------- Áudio & Vocabulário
+
+def escolher_melhor_dispositivo():
+    """Detecta e seleciona o melhor dispositivo de entrada, evitando drivers virtuais inativos."""
+    try:
+        devs = sd.query_devices()
+        default_in = sd.default.device[0]
+    except Exception:
+        return None
+
+    env_dev = os.environ.get("DISPOSITIVO_MIC")
+    if env_dev is not None:
+        try:
+            return int(env_dev)
+        except ValueError:
+            pass
+
+    palavras_virtuais = ["iriun", "steam streaming", "virtual", "cable", "mixagem", "stereo mix"]
+    candidatos_reais = []
+
+    for i, d in enumerate(devs):
+        if d.get("max_input_channels", 0) <= 0:
+            continue
+        nome = d.get("name", "").strip().lower()
+        if not any(v in nome for v in palavras_virtuais):
+            candidatos_reais.append((i, d.get("name")))
+
+    # Se o padrão do sistema não for um driver virtual conhecido, usa ele
+    if 0 <= default_in < len(devs):
+        nome_default = devs[default_in].get("name", "").lower()
+        if not any(v in nome_default for v in palavras_virtuais):
+            return default_in
+
+    # Caso contrário, pega o primeiro microfone físico real encontrado
+    if candidatos_reais:
+        return candidatos_reais[0][0]
+
+    return default_in if default_in >= 0 else None
+
+
+def carregar_vocabulario():
+    """Lê termos prioritários de vocabulario.txt e monta gramática Kaldi com [unk]."""
+    if not os.path.isfile(ARQUIVO_VOCABULARIO):
+        return None
+
+    termos = []
+    try:
+        with open(ARQUIVO_VOCABULARIO, "r", encoding="utf-8") as f:
+            for linha in f:
+                linha = linha.strip()
+                if linha and not linha.startswith("#"):
+                    termos.append(linha.lower())
+    except Exception as e:
+        log(f"[VOCABULÁRIO] Erro ao ler vocabulario.txt: {e}")
+        return None
+
+    if not termos:
+        return None
+
+    # O token especial '[unk]' permite palavras fora da lista enquanto dá peso às da lista!
+    if "[unk]" not in termos:
+        termos.append("[unk]")
+
+    log(f"[VOCABULÁRIO] 📚 {len(termos) - 1} termos prioritários carregados de vocabulario.txt")
+    return json.dumps(termos, ensure_ascii=False)
+
 
 def nivel_do_audio(dados):
-    """Volume do bloco em escala perceptual 0..1 (-50 dB -> 0, -10 dB -> 1)."""
+    """Volume perceptual em escala 0..1 (-50 dB -> 0, -10 dB -> 1)."""
     amostras = array.array("h", dados)
     if not amostras:
         return 0.0
@@ -140,7 +201,7 @@ def nivel_do_audio(dados):
 
 
 def processar_audio(reconhecedor, fila_audio, stream):
-    """Loop principal de transcrição. Só retorna (com exceção) se o microfone parar."""
+    """Loop principal de transcrição contínua."""
     ultimo_parcial = ""
 
     while True:
@@ -178,6 +239,34 @@ def processar_audio(reconhecedor, fila_audio, stream):
                 publicar({"tipo": "parcial", "texto": parcial})
 
 
+def carregar_modelo_seguro(caminho):
+    """Carrega o modelo Vosk, tratando a limitação do Windows para arquivos G.carpa > 2GB."""
+    rescore_dir = os.path.join(caminho, "rescore")
+    rescore_disabled = os.path.join(caminho, "rescore.disabled")
+
+    # No Windows, arquivos de rescore G.carpa > 2GB estouram o offset de 32 bits no Kaldi
+    if os.path.isdir(rescore_dir):
+        carpa = os.path.join(rescore_dir, "G.carpa")
+        if os.path.isfile(carpa) and os.path.getsize(carpa) > 2 * 1024 * 1024 * 1024:
+            try:
+                os.rename(rescore_dir, rescore_disabled)
+                log("[MOTOR] ℹ️ Pasta 'rescore' contornada (evita estouro de 32 bits no Windows). Usando grafo HCLG completo.")
+            except Exception:
+                pass
+
+    try:
+        return Model(caminho)
+    except Exception as e:
+        if os.path.isdir(rescore_dir):
+            try:
+                os.rename(rescore_dir, rescore_disabled)
+                log("[MOTOR] ℹ️ Tentando carregar o modelo sem a pasta 'rescore'...")
+                return Model(caminho)
+            except Exception:
+                pass
+        raise e
+
+
 def motor_de_voz():
     SetLogLevel(-1)
 
@@ -186,13 +275,26 @@ def motor_de_voz():
         return
 
     try:
-        modelo = Model(CAMINHO_MODELO)
+        modelo = carregar_modelo_seguro(CAMINHO_MODELO)
     except Exception as erro:
         definir_status("erro", f"Falha ao carregar o modelo de voz: {erro}")
         return
 
-    reconhecedor = KaldiRecognizer(modelo, SAMPLE_RATE)
-    fila_audio = queue.Queue(maxsize=40)  # ~10 s de áudio; evita crescer sem limite
+    # Modelos com HCLG.fst já possuem o vocabulário completo pré-compilado
+    tem_hclg = os.path.isfile(os.path.join(CAMINHO_MODELO, "graph", "HCLG.fst"))
+    if tem_hclg:
+        log("[VOCABULÁRIO] 📚 Modelo avançado ativo: vocabulário completo (300.000+ palavras).")
+        reconhecedor = KaldiRecognizer(modelo, SAMPLE_RATE)
+    else:
+        gramatica = carregar_vocabulario()
+        if gramatica:
+            reconhecedor = KaldiRecognizer(modelo, SAMPLE_RATE, gramatica)
+        else:
+            reconhecedor = KaldiRecognizer(modelo, SAMPLE_RATE)
+
+    reconhecedor.SetWords(True)
+
+    fila_audio = queue.Queue(maxsize=60)
 
     def callback_microfone(indata, frames, tempo, status):
         if status:
@@ -200,12 +302,18 @@ def motor_de_voz():
         try:
             fila_audio.put_nowait(bytes(indata))
         except queue.Full:
-            pass  # processamento atrasado: descarta o bloco em vez de acumular atraso
+            pass
 
-    # Se o microfone falhar (desconectado, ocupado...), tenta reabrir em vez de morrer
+    dispositivo_idx = escolher_melhor_dispositivo()
+    try:
+        nome_dev = sd.query_devices(dispositivo_idx)["name"]
+        log(f"[MIC] 🎙️ Usando dispositivo de entrada [{dispositivo_idx}]: {nome_dev}")
+    except Exception:
+        log(f"[MIC] 🎙️ Usando dispositivo padrão [{dispositivo_idx}]")
+
     while True:
         try:
-            with sd.RawInputStream(samplerate=SAMPLE_RATE, blocksize=TAMANHO_BLOCO, device=None,
+            with sd.RawInputStream(samplerate=SAMPLE_RATE, blocksize=TAMANHO_BLOCO, device=dispositivo_idx,
                                    dtype="int16", channels=1, callback=callback_microfone) as stream:
                 definir_status("pronto", "Ouvindo")
                 processar_audio(reconhecedor, fila_audio, stream)
@@ -220,8 +328,6 @@ def motor_de_voz():
 # ---------------------------------------------------------------- Ciclo de vida
 
 def vigiar_processo_pai():
-    """Iniciado pelo Tauri: o app segura o stdin aberto. Se o app fechar (ou travar), o stdin
-    recebe EOF e o motor se encerra, liberando o microfone e a porta."""
     try:
         while sys.stdin.read(1024):
             pass
@@ -237,7 +343,7 @@ async def main():
     try:
         servidor = await serve(atender_interface, HOST, PORTA)
     except OSError as erro:
-        log(f"[REDE] ❌ Não foi possível usar a porta {PORTA} (outro motor já está rodando?): {erro}")
+        log(f"[REDE] ❌ Não foi possível usar a porta {PORTA}: {erro}")
         sys.exit(2)
 
     async with servidor:
