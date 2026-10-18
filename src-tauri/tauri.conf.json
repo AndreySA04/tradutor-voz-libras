@@ -10,15 +10,19 @@
     "frontendDist": "../dist"
   },
   "app": {
-   "windows": [
+    "windows": [
       {
+        "label": "main",
         "title": "Tradutor Libras",
-        "width": 280,
-        "height": 400,
-        "resizable": false,
+        "width": 300,
+        "height": 500,
+        "minWidth": 260,
+        "minHeight": 420,
+        "resizable": true,
         "fullscreen": false,
-        "decorations": true, 
+        "decorations": false,
         "transparent": true,
+        "shadow": false,
         "alwaysOnTop": true
       }
     ],

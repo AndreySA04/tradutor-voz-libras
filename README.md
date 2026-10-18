@@ -65,112 +65,64 @@ Configurado com o modelo *small* para garantir que o motor de voz não sobrecarr
 
 ---
 
-### 🤖 Tradução para Libras
+### 🤖 Tradução e Fila Inteligente para Libras
 
 **Avatar 3D Integrado:**  
 Utilização do personagem Ícaro (VLibras) para a sinalização dos termos traduzidos.
 
-**Fila de Reprodução (Queue System):**  
-Implementação de uma lógica de fila no React que impede que uma frase curta interrompa a animação de uma frase longa em andamento, garantindo uma sinalização fluida e completa.
+**Fila Inteligente e Anti-Atraso (Smart Queue):**  
+- **Agrupamento de frases:** sentenças em espera são unificadas em uma única tradução, evitando pausas e requisições repetidas.
+- **Velocidade adaptativa:** o avatar acelera automaticamente (1x → 1.5x → 2x) quando há acúmulo de frases na fila.
+- **Modo ao vivo:** frases antigas (>15s) são descartadas em caso de engarrafamento para priorizar a fala atual.
+- **Watchdog anti-travamento:** recuperação automática caso o player Unity não emita o término da animação.
+- **Botão "Pular":** permite ao usuário limpar a fila e interromper a animação a qualquer momento.
 
 ---
 
-### 🖥️ Interface
+### 🖥️ Interface Moderna e Feedback Visual
 
-**Modo Flutuante:**  
-A janela é configurada para permanecer sempre acima de outros aplicativos, facilitando o uso durante videochamadas ou consumo de vídeos.
-
-**Design Minimalista:**  
-Interface limpa, sem bordas pesadas, focada totalmente no avatar e nos controles essenciais.
-
-**Janela Interativa:**  
-O usuário pode arrastar a janela livremente pela tela para posicioná-la onde for mais conveniente.
+- **Barra de título personalizada:** arrastável, com controles de janela (minimizar/fechar) e indicador de status (ouvindo, sinalizando, conectando, mudo, erro).
+- **Legendas em tempo real:** exibição da frase atual em execução, estrutura de glosa em Libras e barra de progresso.
+- **Equalizador de voz ao vivo:** visualizador com ondas de áudio dinâmicas e transcrição parcial enquanto o usuário fala.
+- **Design Glassmorphism:** tema escuro sofisticado com cantos arredondados, tipografia Inter e feedback por microinterações.
 
 ---
 
-### 🛠️ Controles
+### 🛠️ Resiliência e Inicialização Automática
 
-**Gerenciamento de Áudio:**  
-Botão de Mute/Unmute com feedback visual instantâneo. Ao mutar, o motor Python interrompe o processamento de áudio para garantir a privacidade do usuário.
-
-**Feedback de Status:**  
-O ícone do microfone altera sua opacidade e cor (verde/vermelho) para indicar se o sistema está ouvindo ativamente ou em repouso.
+- **Inicialização transparente:** o Tauri inicia o motor Python automaticamente ao abrir o app e o finaliza ao fechar a janela.
+- **WebSocket auto-regenerativo:** reconexão com backoff exponencial (0.5s a 5s) e sincronização do estado de mute.
+- **Painel de diagnóstico:** aviso com botão de "Reiniciar motor" caso ocorra queda ou erro no microfone/modelo.
 
 ---
 
 ### 📌 Observações
 
 - Necessário microfone funcional
-- O modelo Vosk deve estar presente localmente
-- O VLibras depende do carregamento inicial dos assets
+- O modelo Vosk em português deve estar presente na pasta `src-tauri/motor-voz/modelo`
+- Conexão com a internet necessária para os dicionários e tradução de glosas do VLibras
+
 ## ⚙️ Instalação e Execução Local
 
-Siga os passos abaixo para configurar os dois ambientes necessários.
+### 1. Configurar o Modelo de Voz (Python)
 
+1. Certifique-se de que o Python 3.10+ está instalado.
+2. Na pasta `src-tauri/motor-voz`, instale as dependências:
+   ```bash
+   cd src-tauri/motor-voz
+   pip install -r requirements.txt
+   ```
+3. Baixe o modelo `vosk-model-small-pt-0.3` do site oficial do Vosk e extraia na pasta:
+   ```bash
+   src-tauri/motor-voz/modelo/
+   ```
 
-### 🐍 1. Motor de Reconhecimento de Voz (Python)
+### 2. Executar a Aplicação (Tauri + React)
 
-Esta parte é responsável por capturar o áudio do microfone e processar a transcrição via Vosk.
-
-#### 📂 Acesse a pasta do motor
-```bash
-cd src-tauri/motor-voz
-```
-
-#### 🧪 Crie e ative um ambiente virtual (Venv)
-```bash
-python -m venv venv
-
-# No Windows:
-.\venv\Scripts\activate
-
-# No Linux/Mac:
-source venv/bin/activate
-```
-
-#### 📦 Instale as dependências
-```bash
-pip install -r requirements.txt
-```
-
-#### ⚙️ Configure o modelo
-
-- Baixe o modelo em português (vosk-model-small-pt-0.3) no site oficial do Vosk
-- Extraia o conteúdo e renomeie a pasta para modelo dentro de:
-
-```bash
-src-tauri/motor-voz/
-```
-
-#### ▶️ Execute o motor
-```bash
-python motor.py
-```
-
-### 🖥️ 2. Interface Gráfica e Desktop (Tauri + React)
-
-Esta parte gerencia a interface do usuário, a renderização do avatar e a conexão WebSocket com o Python.
-
-#### 📂 Acesse a raiz do projeto
-```bash
-cd ../..
-```
-
-#### 📦 Instale as dependências do Node.js
+Na raiz do projeto:
 ```bash
 npm install
-```
-
-#### ▶️ Execute o ambiente de desenvolvimento do Tauri
-```bash
 npm run tauri dev
 ```
 
-### 🔄 Fluxo de Comunicação
-Para entender como os dados trafegam no sistema:
-
-- O motor Python abre um servidor WebSocket na porta 8765
-- A interface React se conecta a esse servidor assim que é iniciada
-- Ao detectar voz, o Python envia uma string de texto via socket
-- O React recebe o texto, adiciona-o a uma fila de sinais
-- O avatar 3D executa as animações conforme a disponibilidade
+> **Nota:** O Tauri inicia o motor Python automaticamente em segundo plano. Caso prefira rodar o motor em um terminal separado para depuração, basta executar `python src-tauri/motor-voz/motor.py` antes de iniciar a interface — o Tauri detectará a porta ativa e não iniciará uma segunda instância.
