@@ -8,58 +8,228 @@
 # não quebrar termos técnicos em palavras aleatórias.
 # ==============================================================================
 
-# Tecnologia, ADS & Engenharia de Software
-programação
-programação orientada a objetos
-orientada a objetos
-diagrama de classes
-diagrama
-engenharia de software
-desenvolvimento de software
-desenvolvimento web
-software
-código
-algoritmo
-estrutura de dados
-banco de dados
-interface
-classes
-objetos
-métodos
-atributos
-função
-variável
+# Termos basicos e comandos
+sim
+nao
+ola
+bom
+dia
+tarde
+noite
+por
+favor
+obrigado
+ajuda
+abrir
+fechar
+iniciar
+parar
+limpar
+apagar
+salvar
+voltar
+avancar
+
+# Fundamentos de Computacao e ADS
 computador
 sistema
-tecnologia
+sistemas
+analise
+desenvolvimento
+programa
+programacao
+codigo
+fonte
+algoritmo
+logica
+software
+hardware
+internet
+rede
+redes
+processador
+memoria
+armazenamento
+arquivo
+diretorio
+pasta
+terminal
+console
+servidor
+cliente
 
-# Comunicação, Educação & Acessibilidade
-acessibilidade
-língua brasileira de sinais
-linguagem de sinais
-libras
-tradutor
-tradução
-trabalho de graduação
-apresentação
-professor
-alunos
-faculdade
-fatec
+# Programacao e Estruturas de Dados
+variavel
+variaveis
+constante
+funcao
+funcoes
+metodo
+metodos
+classe
+classes
+objeto
+objetos
+instancia
+parametro
+argumento
+retorno
+escopo
+condicao
+estrutura
+repeticao
+laco
+enquanto
+para
+vetor
+matriz
+lista
+pilha
+fila
+ponteiro
+recursao
+modulo
+pacote
+biblioteca
+framework
+compilador
+interpretador
+depuracao
+depurar
+bug
+erro
+excecao
+sintaxe
+tipagem
+estatica
+dinamica
 
-# Expressões Cotidianas
-olá
-olá tudo bem
-como vai
-tudo certo
-bom dia
-boa tarde
-boa noite
-por favor
-obrigado
-obrigada
-com licença
-até logo
-tchau
-sim
-não
+# Orientacao a Objetos e Arquitetura
+heranca
+polimorfismo
+encapsulamento
+abstracao
+interface
+interfaces
+componente
+componentes
+padrao
+projeto
+arquitetura
+camadas
+monolito
+microsservicos
+mvc
+design
+patterns
+
+# Desenvolvimento Web e Interfaces
+web
+frontend
+backend
+fullstack
+requisicao
+resposta
+servico
+protocolo
+porta
+rota
+rotas
+autenticacao
+autorizacao
+token
+sessao
+formulario
+validacao
+layout
+responsivo
+componentizacao
+estado
+renderizacao
+
+# Banco de Dados e Persistencia
+banco
+dados
+relacional
+tabela
+coluna
+registro
+campo
+chave
+primaria
+estrangeira
+indice
+consulta
+insercao
+atualizacao
+delecao
+transacao
+entidade
+relacionamento
+diagrama
+modelagem
+persistência
+migracao
+
+# Engenharia de Software e Metodologias
+requisito
+requisitos
+funcional
+regra
+negocio
+usuario
+caso
+uso
+modelagem
+fluxo
+processo
+diagrama
+documentacao
+agil
+scrum
+kanban
+sprint
+entrega
+escopo
+qualidade
+teste
+testes
+unitario
+integracao
+cobertura
+refatoracao
+
+# Versionamento e DevOps
+versao
+versionamento
+repositorio
+commit
+branch
+merge
+conflito
+pull
+push
+clone
+checkout
+deploy
+implantacao
+ambiente
+producao
+homologacao
+container
+integracao
+continua
+
+# Seguranca e Redes
+seguranca
+criptografia
+hash
+senha
+acesso
+permissao
+vulnerabilidade
+firewall
+conexao
+latencia
+largura
+banda
